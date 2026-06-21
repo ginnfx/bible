@@ -1,0 +1,42 @@
+[project]
+name = "bible-tui"
+version = "0.1.0"
+description = "A Bible reader for the terminal: a three-panel browser, live search, themes, clipboard copy, bookmarks/notes/highlights, reading plans, and a Strong's interlinear."
+readme = "README.md"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "textual>=8.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+# Only needed to build standalone executables (see packaging/) - not a
+# runtime dependency, so it stays out of the base install. Nuitka compiles
+# to real machine code rather than freezing bytecode into an archive, which
+# runs faster and starts up quicker than a frozen-bytecode archive.
+packaging = ["nuitka>=2.0"]
+
+[project.scripts]
+# `bible` is the name the docs use; `bible-tui` stays for anyone who
+# already has it on their PATH.
+bible = "bible_tui.cli:main"
+bible-tui = "bible_tui.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["bible_tui*"]
+
+[tool.setuptools.package-data]
+bible_tui = ["ui/themes.tcss", "data/schema.sql"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

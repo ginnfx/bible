@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+.DS_Store
+.serena/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+*.onefile-build/
+nuitka-crash-report.xml
+scripts/raw_cache/
+# A separate, third-party reference project (see reader.py's docstring),
+# not part of this package.
+christ-cli-main/
+*.db
+*.db-wal
+*.db-shm
+# Content-only (no personal data - see scripts/build_seed_db.py), needed
+# by CI to bundle into packaged builds.
+!packaging/seed/bible.db
