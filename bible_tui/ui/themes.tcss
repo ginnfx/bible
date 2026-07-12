@@ -1,0 +1,25 @@
+/* App-wide chrome. Per-widget styling lives in each widget's DEFAULT_CSS;
+   this file holds only what spans screens. */
+
+Screen {
+    background: $background;
+}
+
+/* Modal overlays share one look: rounded active border on the surface
+   colour, dimmed page behind. */
+#goto-box,
+#search-box,
+#study-box {
+    border: round $border;
+    background: $surface;
+}
+
+#study-verse {
+    padding: 1 2;
+    background: $panel;
+}
+
+InterlinearWordCell {
+    border: round $border-blurred;
+    text-align: center;
+}
