@@ -1,0 +1,101 @@
+name: Build standalone binaries
+
+# Compiled binaries are published to the separate ginnfx/bible-tui-releases
+# repo for anyone who wants to run the app without a Python install; the
+# source itself (this repo) is public too, under the GPL-3.0.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset_name: bible-linux-x86_64
+          - os: windows-latest
+            asset_name: bible-windows-x86_64.exe
+          - os: macos-14
+            asset_name: bible-macos-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq patchelf
+
+      - name: Install project and Nuitka
+        run: pip install -e ".[packaging]"
+
+      - name: Build with Nuitka
+        run: >
+          python -m nuitka
+          --onefile
+          --output-dir=dist
+          --output-filename=bible
+          --include-data-file=bible_tui/data/schema.sql=bible_tui/data/schema.sql
+          --include-data-file=bible_tui/ui/themes.tcss=bible_tui/ui/themes.tcss
+          --include-data-file=packaging/seed/bible.db=seed/bible.db
+          --assume-yes-for-downloads
+          --remove-output
+          packaging/entry_point.py
+
+      - name: Collect the built binary under its release name
+        shell: bash
+        run: |
+          mkdir -p out
+          if [ -f dist/bible.exe ]; then
+            cp dist/bible.exe "out/${{ matrix.asset_name }}"
+          else
+            cp dist/bible "out/${{ matrix.asset_name }}"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: out/${{ matrix.asset_name }}
+
+  publish:
+    needs: build
+    # Publish whatever platforms actually finished - one slow or failed
+    # matrix leg (Windows has historically been the slow one) shouldn't
+    # hold back the others. `!cancelled()` skips only if you cancel the
+    # whole run yourself; a leg failing still lets this run.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish binaries to the public releases repo
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+        run: |
+          shopt -s nullglob
+          files=(artifacts/*/*)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No artifacts produced by any matrix leg - nothing to publish."
+            exit 1
+          fi
+          # Idempotent for a re-run against the same tag: upload to an
+          # existing release if there is one, otherwise create it.
+          if gh release view "${{ github.ref_name }}" --repo ginnfx/bible-tui-releases >/dev/null 2>&1; then
+            gh release upload "${{ github.ref_name }}" "${files[@]}" \
+              --repo ginnfx/bible-tui-releases --clobber
+          else
+            gh release create "${{ github.ref_name }}" "${files[@]}" \
+              --repo ginnfx/bible-tui-releases \
+              --title "bible-tui ${{ github.ref_name }}" \
+              --notes "Automated build from the ginnfx/bible source repo (GPL-3.0). Source: https://github.com/ginnfx/bible" \
+              --latest
+          fi
