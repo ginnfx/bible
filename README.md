@@ -3,15 +3,12 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 An open-source Bible reader for the terminal, built with
-[Textual](https://textual.textualize.io/): a three-panel browser, live
-full-text search, eight themes, bookmarks/notes/highlights, a One Year
-reading plan with streaks, a Strong's interlinear view, cross references,
-ten reading modes, and three public-domain translations (KJV, ASV, WEB).
+[Textual](https://textual.textualize.io/),  and three public-domain translations (KJV, ASV, WEB).
 
 The reading experience follows
 [christ-cli](https://github.com/whoisyurii/christ-cli) - the Books │
 Chapters │ Scripture layout, vim-style movement, live preview, themes,
-`y`/`Y` copy - on top of this project's own SQLite-backed study features.
+`y`/`Y` copy on top of this project's own SQLite-backed study features.
 
 ## Install
 
@@ -105,16 +102,6 @@ bible print "John 3:16"                   # via CUPS (macOS/Linux)
 Position, translation, theme, and per-book chapter are all saved on exit.
 Copying uses the native clipboard and OSC 52, so it works over SSH.
 
-### Reading plans
-
-Six ship: One Year Bible, Chronological, New Testament in 90 days, Gospels
-in 40, Psalms & Proverbs in a month, whole Bible in 90 days. `c` catches up
-on what you missed; `s` switches between plans without losing progress.
-
-### Reading modes (`R`)
-
-Memorise, dictate, quiz, speed-read, read-aloud (macOS `say`), sermon,
-contemplative, meditative, guided prayer (ACTS structure), and journal.
 
 ## Tests
 
