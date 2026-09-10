@@ -64,7 +64,7 @@ bible restore <path> [--replace]          # merge in, or mirror exactly
 bible print "John 3:16"                   # via CUPS (macOS/Linux)
 ```
 
-## The browser
+## keybind guide
 
 | Key | Action |
 |---|---|
@@ -99,18 +99,6 @@ bible print "John 3:16"                   # via CUPS (macOS/Linux)
 | `?` | full keybinding reference |
 | `q` `q` | quit |
 
-Position, translation, theme, and per-book chapter are all saved on exit.
-Copying uses the native clipboard and OSC 52, so it works over SSH.
-
-
-## Tests
-
-```bash
-pytest
-```
-
-Service-layer tests need no setup; `test_app_smoke.py`'s integration tests
-need a fully-imported `bible.db` and skip automatically otherwise.
 
 ## Data sources
 
