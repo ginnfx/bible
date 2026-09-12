@@ -33,11 +33,16 @@ class StudyScreen(Screen[tuple[int, int, int] | None]):
     StudyScreen #dict-list { height: 1fr; }
     """
 
+    #: Delay before a keystroke actually reloads the dictionary list, so a
+    #: fast typist doesn't rebuild it on every character.
+    DICT_FILTER_DEBOUNCE = 0.2
+
     def __init__(self, study: StudyService, verse: Verse, translation_code: str):
         super().__init__()
         self.study = study
         self.verse = verse
         self.translation_code = translation_code
+        self._dict_filter_timer = None
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -102,8 +107,11 @@ class StudyScreen(Screen[tuple[int, int, int] | None]):
         self.dismiss(None)
 
     def on_input_changed(self, event: Input.Changed) -> None:
-        if event.input.id == "dict-filter":
-            self._reload_dictionary()
+        if event.input.id != "dict-filter":
+            return
+        if self._dict_filter_timer is not None:
+            self._dict_filter_timer.stop()
+        self._dict_filter_timer = self.set_timer(self.DICT_FILTER_DEBOUNCE, self._reload_dictionary)
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if event.list_view.id != "xref-list" or not self._xrefs:

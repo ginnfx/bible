@@ -349,9 +349,12 @@ class PlanService:
         start = date.fromisoformat(plan["start_date"])
         return max(1, ((today or date.today()) - start).days + 1)
 
-    def progress(self, plan_id: int) -> tuple[int, int]:
-        """Returns (completed_days, total_days)."""
-        rows = self.conn.execute(
+    def _day_completion(self, plan_id: int) -> list[sqlite3.Row]:
+        """One row per plan day: how many entries it has and how many of
+        them are completed. Shared by progress() and current_streak() so
+        the "a day counts as done only if every entry is done" rule lives
+        in exactly one place."""
+        return self.conn.execute(
             """
             SELECT day_number, COUNT(*) AS total,
                    SUM(CASE WHEN completed_at IS NOT NULL THEN 1 ELSE 0 END) AS done
@@ -359,26 +362,20 @@ class PlanService:
             """,
             (plan_id,),
         ).fetchall()
+
+    def progress(self, plan_id: int) -> tuple[int, int]:
+        """Returns (completed_days, total_days)."""
+        rows = self._day_completion(plan_id)
         completed = sum(1 for r in rows if r["done"] == r["total"])
         return completed, len(rows)
 
     def current_streak(self, plan_id: int) -> int:
         """Counts consecutive completed days working backward from today,
         where a day counts as done only if every entry for that day is done."""
-        rows = self.conn.execute(
-            """
-            SELECT day_number, COUNT(*) AS total,
-                   SUM(CASE WHEN completed_at IS NOT NULL THEN 1 ELSE 0 END) AS done
-            FROM plan_entries WHERE plan_id = ? GROUP BY day_number ORDER BY day_number
-            """,
-            (plan_id,),
-        ).fetchall()
-        completed_days = {r["day_number"] for r in rows if r["done"] == r["total"]}
+        completed_days = {r["day_number"] for r in self._day_completion(plan_id) if r["done"] == r["total"]}
 
-        today_day_number = self.current_day_number(plan_id)
-
+        d = self.current_day_number(plan_id)
         streak = 0
-        d = today_day_number
         while d in completed_days:
             streak += 1
             d -= 1

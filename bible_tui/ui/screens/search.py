@@ -39,6 +39,10 @@ MIN_QUERY_LENGTH = 3
 #: thousand list items.
 RESULT_LIMIT = 200
 
+#: Delay before a keystroke actually triggers a search, so a fast typist
+#: doesn't run a full FTS query per character.
+SEARCH_DEBOUNCE = 0.2
+
 #: Scopes cycled with tab, in widening-to-narrowing order - built from the
 #: same canonical list the Books panel filters with (`book_scope_service`),
 #: so the two "narrow what I'm looking at" features never drift apart.
@@ -119,6 +123,7 @@ class SearchScreen(Screen[tuple[int, int, int] | None]):
         #: the saved entries themselves (each carries its own filters).
         self._saved_count = 0
         self._saved_entries: list[dict] = []
+        self._search_timer = None
 
     # ------------------------------------------------------------------
     # Composition
@@ -157,7 +162,10 @@ class SearchScreen(Screen[tuple[int, int, int] | None]):
 
     def on_input_changed(self, event: Input.Changed) -> None:
         self._history_mode = False
-        self._run(event.value)
+        if self._search_timer is not None:
+            self._search_timer.stop()
+        value = event.value
+        self._search_timer = self.set_timer(SEARCH_DEBOUNCE, lambda: self._run(value))
 
     def _run(self, raw: str) -> None:
         query = raw.strip()

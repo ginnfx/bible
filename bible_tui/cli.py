@@ -194,6 +194,8 @@ def _resolve_verses(reference_words: list[str], context: "_Context") -> tuple[li
     # No chapter at all means the whole first chapter; a chapter with no
     # verse means that whole chapter. Both are what people expect.
     chapter = parsed.chapter or 1
+    if chapter < 1 or chapter > book["chapter_count"]:
+        _die(f"{book['name']} only has {book['chapter_count']} chapters.")
     verses = context.repo.get_chapter(book["id"], chapter, context.translation)
     if not verses:
         _die(f"{book['name']} {chapter} is not available in {context.translation}.")

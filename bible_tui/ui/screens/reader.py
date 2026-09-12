@@ -425,9 +425,21 @@ class ReaderScreen(Screen):
         finally:
             self._suppress_preview = False
 
-    def _load_chapter(self, select_verse: int | None = None, keep_focus: bool = False) -> None:
+    def _load_chapter(
+        self,
+        select_verse: int | None = None,
+        keep_focus: bool = False,
+        record_history: bool = True,
+    ) -> None:
         self.credit_time_read()
-        verses = self.navigation.go_to_chapter(self.book_id, self.chapter)
+        if record_history:
+            verses = self.navigation.go_to_chapter(self.book_id, self.chapter)
+        else:
+            # Back/forward already moved the history pointer themselves;
+            # loading the chapter here must not push a new entry on top of it.
+            verses = self.repo.get_chapter(
+                self.book_id, self.chapter, self.navigation.translation_code
+            )
         highlights = self.annotations.highlights_for_chapter(self.book_id, self.chapter)
 
         config = self.app.config
@@ -844,14 +856,14 @@ class ReaderScreen(Screen):
         if target:
             self.book_id, self.chapter = target
             self._sync_sidebars()
-            self._load_chapter(keep_focus=True)
+            self._load_chapter(keep_focus=True, record_history=False)
 
     def action_history_forward(self) -> None:
         target = self.navigation.forward()
         if target:
             self.book_id, self.chapter = target
             self._sync_sidebars()
-            self._load_chapter(keep_focus=True)
+            self._load_chapter(keep_focus=True, record_history=False)
 
     def action_open_goto(self) -> None:
         self.app.push_screen(GotoScreen(self.repo), self._jump_if_result)

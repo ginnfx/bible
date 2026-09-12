@@ -15,6 +15,7 @@ it's showing what it's showing rather than silently changing the query.
 from __future__ import annotations
 
 import difflib
+import re
 from dataclasses import dataclass, field
 
 from ..data.query import ParsedQuery, parse, with_prefix_matching
@@ -182,7 +183,10 @@ class SearchService:
             match = self._best_correction(word, vocabulary)
             if match:
                 corrections[word] = match
-                expression = expression.replace(f'"{word}"', f'"{match}"')
+                # word.replace() only catches a word quoted on its own; a
+                # word inside a multi-word phrase like "believeing this"
+                # needs a word-boundary swap instead.
+                expression = re.sub(rf"\b{re.escape(word)}\b", match, expression)
 
         if not corrections:
             return parsed, {}
