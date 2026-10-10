@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Downloads the latest standalone `bible` binary from the releases repo and
-# puts it on the PATH. No Python, no cloning, no build step.
+# Downloads the latest standalone `bible` binary from this repo's GitHub
+# Releases and puts it on the PATH. No Python, no cloning, no build step.
+# (Windows: install.ps1, or the installer on the Releases page.)
 set -euo pipefail
 
-REPO="ginnfx/bible-tui-releases"
+REPO="ginnfx/bible"
 INSTALL_DIR="${BIBLE_INSTALL_DIR:-$HOME/.local/bin}"
 
 os="$(uname -s)"
@@ -19,16 +20,14 @@ case "$os-$arch" in
         ;;
 esac
 
-tag="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
-    | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')"
-if [ -z "$tag" ]; then
-    echo "Couldn't find a release. Check https://github.com/$REPO/releases" >&2
+echo "Downloading bible ($asset)..."
+mkdir -p "$INSTALL_DIR"
+# /releases/latest/download/ always points at the newest release's asset,
+# so there's no API call (or its rate limit) to look the tag up first.
+if ! curl -fsSL "https://github.com/$REPO/releases/latest/download/$asset" -o "$INSTALL_DIR/bible"; then
+    echo "Couldn't download the binary. Check https://github.com/$REPO/releases" >&2
     exit 1
 fi
-
-echo "Downloading bible $tag ($asset)..."
-mkdir -p "$INSTALL_DIR"
-curl -fsSL "https://github.com/$REPO/releases/download/$tag/$asset" -o "$INSTALL_DIR/bible"
 chmod +x "$INSTALL_DIR/bible"
 
 echo "Installed to $INSTALL_DIR/bible"

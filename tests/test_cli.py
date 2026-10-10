@@ -119,3 +119,42 @@ def test_profile_flag_is_available_before_and_after_a_subcommand():
 
 def test_profile_defaults_to_none_when_not_given():
     assert _build_parser().parse_args(["read", "John 3:16"]).profile is None
+
+
+# --- Output encoding ---
+
+
+class _FakeStream:
+    def __init__(self) -> None:
+        self.reconfigured: dict | None = None
+
+    def reconfigure(self, **kwargs) -> None:
+        self.reconfigured = kwargs
+
+
+def test_windows_output_is_switched_to_utf8(monkeypatch):
+    # Windows writes pipes and redirects in the ANSI code page, which can't
+    # encode every verse - `bible read ... > file` must not crash on one.
+    from bible_tui import cli
+
+    out, err = _FakeStream(), _FakeStream()
+    monkeypatch.setattr(cli.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(cli.sys, "stdout", out)
+    monkeypatch.setattr(cli.sys, "stderr", err)
+
+    cli._use_utf8_output()
+
+    assert out.reconfigured == {"encoding": "utf-8", "errors": "replace"}
+    assert err.reconfigured == {"encoding": "utf-8", "errors": "replace"}
+
+
+def test_other_platforms_keep_their_output_encoding(monkeypatch):
+    from bible_tui import cli
+
+    out = _FakeStream()
+    monkeypatch.setattr(cli.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(cli.sys, "stdout", out)
+
+    cli._use_utf8_output()
+
+    assert out.reconfigured is None

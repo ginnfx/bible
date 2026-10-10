@@ -1411,11 +1411,15 @@ async def test_choosing_speed_read_streams_the_chapters_words(app):
         assert isinstance(app.screen, ReaderScreen)
 
 
-async def test_read_aloud_is_reported_unavailable_off_macos(app, monkeypatch):
+async def test_read_aloud_is_reported_unavailable_without_a_backend(app, monkeypatch):
     from bible_tui.ui.widgets.status_bar import StatusBar
 
     monkeypatch.setattr(
         "bible_tui.ui.screens.reader.tts_service.is_available", lambda: False
+    )
+    monkeypatch.setattr(
+        "bible_tui.ui.screens.reader.tts_service.unavailable_reason",
+        lambda: "Read-aloud needs espeak-ng",
     )
     async with app.run_test() as pilot:
         await pilot.pause()
@@ -1426,7 +1430,7 @@ async def test_read_aloud_is_reported_unavailable_off_macos(app, monkeypatch):
         # No backend on this platform - back in the reader with a status
         # message, not stuck waiting on a process that will never start.
         assert isinstance(app.screen, ReaderScreen)
-        assert "macOS" in str(app.screen.query_one(StatusBar).visual)
+        assert "espeak-ng" in str(app.screen.query_one(StatusBar).visual)
 
 
 async def _open_mode(pilot, downs: int):

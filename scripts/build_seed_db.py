@@ -87,7 +87,9 @@ def build_seed(source: Path, dest: Path) -> None:
 
 
 if __name__ == "__main__":
-    default_source = Path.home() / ".config" / "bible-tui" / "bible.db"
+    from bible_tui.config import DEFAULT_DB_PATH
+
+    default_source = DEFAULT_DB_PATH
     source = Path(sys.argv[1]) if len(sys.argv) > 1 else default_source
     dest = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("packaging/seed/bible.db")
     build_seed(source, dest)

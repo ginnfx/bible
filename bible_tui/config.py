@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import platform
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -7,7 +9,17 @@ import yaml
 
 from .ui.theme import DEFAULT_THEME, PALETTES_BY_NAME
 
-CONFIG_DIR = Path.home() / ".config" / "bible-tui"
+
+def _default_config_dir() -> Path:
+    """``~/.config/bible-tui`` on macOS/Linux; ``%APPDATA%\\bible-tui`` on
+    Windows, where per-user app data conventionally lives."""
+    appdata = os.environ.get("APPDATA")
+    if platform.system() == "Windows" and appdata:
+        return Path(appdata) / "bible-tui"
+    return Path.home() / ".config" / "bible-tui"
+
+
+CONFIG_DIR = _default_config_dir()
 CONFIG_PATH = CONFIG_DIR / "config.yaml"
 DEFAULT_DB_PATH = CONFIG_DIR / "bible.db"
 
@@ -106,7 +118,7 @@ class Config:
         if not config_path.exists():
             return cls(profile=profile, db_path=default_db)
         try:
-            raw = yaml.safe_load(config_path.read_text()) or {}
+            raw = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
         except (OSError, yaml.YAMLError):
             # A corrupt or unreadable config must not block launch; defaults
             # are always valid and the next save rewrites the file.
@@ -140,7 +152,9 @@ class Config:
         data = asdict(self)
         data["db_path"] = str(self.db_path)
         data["last_position"] = list(self.last_position) if self.last_position else None
-        (config_dir / "config.yaml").write_text(yaml.safe_dump(data, sort_keys=False))
+        (config_dir / "config.yaml").write_text(
+            yaml.safe_dump(data, sort_keys=False), encoding="utf-8"
+        )
 
 
 def _one_of(value: object, allowed, fallback: str) -> str:

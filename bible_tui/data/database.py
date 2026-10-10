@@ -59,7 +59,7 @@ def connect(db_path: Path) -> sqlite3.Connection:
 
 
 def init_schema(conn: sqlite3.Connection) -> None:
-    conn.executescript(SCHEMA_PATH.read_text())
+    conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
     _ensure_column(conn, "bookmarks", "folder_id", "INTEGER REFERENCES bookmark_folders(id)")
     conn.commit()
 

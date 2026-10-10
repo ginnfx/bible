@@ -1,0 +1,47 @@
+name: Tests
+
+# The suite on every platform the app ships for - most of it is
+# platform-neutral, but paths, clipboard, printing and read-aloud aren't.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install project
+        run: pip install -e ".[dev]"
+
+      - name: Run tests
+        run: python -m pytest -q
+
+      # No PowerShell on the machines these scripts are usually edited on,
+      # so a syntax error would otherwise only surface on a user's PC.
+      - name: Parse-check the PowerShell scripts
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $failed = $false
+          foreach ($script in Get-ChildItem -Recurse -Filter *.ps1) {
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($script.FullName, [ref]$null, [ref]$errors) | Out-Null
+            foreach ($e in $errors) {
+              Write-Host "$($script.Name):$($e.Extent.StartLineNumber): $($e.Message)"
+              $failed = $true
+            }
+          }
+          if ($failed) { exit 1 }

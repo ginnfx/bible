@@ -17,14 +17,17 @@ import shutil
 import subprocess
 import sys
 
-#: Native clipboard helpers, in the order they're tried. The first entry
-#: whose binary exists on PATH is used.
-_NATIVE_COMMANDS: list[list[str]] = [
-    ["pbcopy"],  # macOS
-    ["wl-copy"],  # Wayland
-    ["xclip", "-selection", "clipboard"],  # X11
-    ["xsel", "--clipboard", "--input"],  # X11 alternative
-    ["clip"],  # Windows
+#: Native clipboard helpers, in the order they're tried, each with the
+#: encoding it expects on stdin. The first entry whose binary exists on
+#: PATH is used.
+_NATIVE_COMMANDS: list[tuple[list[str], str]] = [
+    (["pbcopy"], "utf-8"),  # macOS
+    (["wl-copy"], "utf-8"),  # Wayland
+    (["xclip", "-selection", "clipboard"], "utf-8"),  # X11
+    (["xsel", "--clipboard", "--input"], "utf-8"),  # X11 alternative
+    # Windows: clip.exe reads the console code page unless the input starts
+    # with a UTF-16 byte-order mark, which Python's "utf-16" codec writes.
+    (["clip"], "utf-16"),
 ]
 
 
@@ -46,11 +49,11 @@ def copy(text: str) -> None:
 
 
 def _copy_native(text: str) -> bool:
-    for command in _NATIVE_COMMANDS:
+    for command, encoding in _NATIVE_COMMANDS:
         if shutil.which(command[0]) is None:
             continue
         try:
-            subprocess.run(command, input=text.encode("utf-8"), check=True, timeout=5)
+            subprocess.run(command, input=text.encode(encoding), check=True, timeout=5)
         except (OSError, subprocess.SubprocessError):
             continue
         return True

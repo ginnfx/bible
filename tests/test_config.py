@@ -145,3 +145,22 @@ def test_an_unknown_wrap_or_spacing_value_falls_back(config_in_tmp):
     assert loaded.line_wrap == "soft"
     assert loaded.verse_spacing == "comfortable"
     assert loaded.scripture_columns == 1
+
+
+# --- Platform default location ---
+
+
+def test_windows_keeps_its_config_under_appdata(monkeypatch):
+    monkeypatch.setattr(config_module.platform, "system", lambda: "Windows")
+    monkeypatch.setenv("APPDATA", "C:/Users/me/AppData/Roaming")
+    assert config_module._default_config_dir() == config_module.Path(
+        "C:/Users/me/AppData/Roaming"
+    ) / "bible-tui"
+
+
+def test_macos_and_linux_keep_dot_config(monkeypatch):
+    monkeypatch.setattr(config_module.platform, "system", lambda: "Linux")
+    monkeypatch.setenv("APPDATA", "should-be-ignored")
+    assert config_module._default_config_dir() == (
+        config_module.Path.home() / ".config" / "bible-tui"
+    )

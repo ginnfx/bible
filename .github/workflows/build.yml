@@ -1,8 +1,12 @@
 name: Build standalone binaries
 
-# Compiled binaries are published to the separate ginnfx/bible-tui-releases
-# repo for anyone who wants to run the app without a Python install; the
-# source itself (this repo) is public too, under the GPL-3.0.
+# Compiled binaries (plus a double-click Windows installer) are published
+# to this repo's own GitHub Releases for anyone who wants to run the app
+# without a Python install. install.sh / install.ps1 download from there.
+#
+# A `v*` tag builds and publishes; a manual run (workflow_dispatch) only
+# builds, so the binaries can be test-downloaded from the run's artifacts
+# without cutting a release.
 
 on:
   push:
@@ -59,27 +63,54 @@ jobs:
             cp dist/bible "out/${{ matrix.asset_name }}"
           fi
 
+      # Proves the bundled seed database made it in: a fresh machine with
+      # no config at all should still be able to look up a verse.
+      - name: Smoke-test the binary
+        shell: bash
+        run: |
+          output="$("out/${{ matrix.asset_name }}" read "John 3:16")"
+          echo "$output"
+          echo "$output" | grep -q "God so loved the world"
+
+      - name: Build the Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --no-progress -y
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          $version = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}".TrimStart("v") } else { "0.0.0-dev" }
+          & $iscc "/DAppVersion=$version" "/DSourceExe=$PWD\dist\bible.exe" "/O$PWD\out" packaging\windows\bible.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset_name }}
-          path: out/${{ matrix.asset_name }}
+          path: out/*
 
   publish:
     needs: build
     # Publish whatever platforms actually finished - one slow or failed
     # matrix leg (Windows has historically been the slow one) shouldn't
     # hold back the others. `!cancelled()` skips only if you cancel the
-    # whole run yourself; a leg failing still lets this run.
-    if: ${{ !cancelled() }}
+    # whole run yourself; a leg failing still lets this run. Manual runs
+    # stop at the artifacts.
+    if: ${{ !cancelled() && github.ref_type == 'tag' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Publish binaries to the public releases repo
+      - name: Publish binaries to this repo's Releases
         env:
-          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
         run: |
           shopt -s nullglob
           files=(artifacts/*/*)
@@ -89,13 +120,12 @@ jobs:
           fi
           # Idempotent for a re-run against the same tag: upload to an
           # existing release if there is one, otherwise create it.
-          if gh release view "${{ github.ref_name }}" --repo ginnfx/bible-tui-releases >/dev/null 2>&1; then
-            gh release upload "${{ github.ref_name }}" "${files[@]}" \
-              --repo ginnfx/bible-tui-releases --clobber
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" --repo "$REPO" --clobber
           else
-            gh release create "${{ github.ref_name }}" "${files[@]}" \
-              --repo ginnfx/bible-tui-releases \
-              --title "bible-tui ${{ github.ref_name }}" \
-              --notes "Automated build from the ginnfx/bible source repo (GPL-3.0). Source: https://github.com/ginnfx/bible" \
+            gh release create "$TAG" "${files[@]}" \
+              --repo "$REPO" \
+              --title "bible $TAG" \
+              --notes "Windows: download **bible-windows-x86_64-setup.exe** and double-click it. macOS/Linux: see the README's one-line install." \
               --latest
           fi
