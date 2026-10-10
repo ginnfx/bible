@@ -5,9 +5,6 @@ description = "A Bible reader for the terminal: a three-panel browser, live sear
 readme = "README.md"
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
-classifiers = [
-    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
-]
 requires-python = ">=3.11"
 dependencies = [
     "textual>=8.0",
