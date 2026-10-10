@@ -12,6 +12,24 @@ Chapters │ Scripture layout, vim-style movement, live preview, themes,
 
 ## Install
 
+### Windows 10/11
+
+**[Download the installer](https://github.com/ginnfx/bible/releases/latest/download/bible-windows-x86_64-setup.exe)**
+and double-click it. No admin rights or Python needed. It adds **Bible**
+to the Start menu and `bible` to your PATH, and you can uninstall it from
+Settings › Apps.
+
+Windows may show "Windows protected your PC" because the installer isn't
+code-signed. Click **More info › Run anyway**.
+
+Or from PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/ginnfx/bible/main/install.ps1 | iex
+```
+
+### macOS / Linux
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ginnfx/bible/main/install.sh | bash
 ```
@@ -19,10 +37,11 @@ curl -fsSL https://raw.githubusercontent.com/ginnfx/bible/main/install.sh | bash
 Downloads the latest standalone binary (macOS Apple Silicon or Linux
 x86_64) and puts `bible` on your PATH. No Python required.
 
-Other platforms, or to run from source instead:
+### From source
 
 ```bash
-bash setup.sh
+bash setup.sh                                          # macOS / Linux
+powershell -ExecutionPolicy Bypass -File setup.ps1     # Windows
 ```
 
 Or manually:
@@ -34,8 +53,9 @@ pip install -e ".[dev]"
 python scripts/import_data.py   # one-time Bible data import (~80MB db)
 ```
 
-Config and database live under `~/.config/bible-tui/`. Pass `--profile
-NAME` (or set `BIBLE_TUI_PROFILE`) to keep separate config/database pairs.
+Config and database live under `~/.config/bible-tui/` (macOS/Linux) or
+`%APPDATA%\bible-tui\` (Windows). Pass `--profile NAME` (or set
+`BIBLE_TUI_PROFILE`) to keep separate config/database pairs.
 
 Building your own standalone binary is covered in [`packaging/`](packaging/).
 
@@ -61,8 +81,11 @@ are pipe-aware - plain text when piped, a rendered card in a terminal.
 bible check [--thorough]                  # verify database integrity
 bible backup [path] [--personal]          # dated copy, or just your own data
 bible restore <path> [--replace]          # merge in, or mirror exactly
-bible print "John 3:16"                   # via CUPS (macOS/Linux)
+bible print "John 3:16"                   # send to your default printer
 ```
+
+Read-aloud (`R` › Read aloud) uses the system voice. It's built in on
+macOS and Windows. On Linux, install `espeak-ng` first.
 
 ## keybind guide
 

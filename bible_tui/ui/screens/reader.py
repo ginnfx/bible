@@ -232,7 +232,7 @@ class ReaderScreen(Screen):
         self._suppress_preview = False
         self.focus_mode = False
         self.show_verse_numbers = True
-        # The running `say` process for read-aloud, if one is playing -
+        # The running read-aloud process, if one is playing -
         # tracked here (not on the picker screen, which is long gone by the
         # time this needs stopping) so R toggles play/stop in one keypress.
         self._tts_process = None
@@ -710,13 +710,17 @@ class ReaderScreen(Screen):
             self._flash("Stopped reading aloud")
             return
         if not tts_service.is_available():
-            self._flash("Read-aloud needs macOS's `say` command")
+            self._flash(tts_service.unavailable_reason())
             return
         verses = self.query_one("#verse-view", VerseView).verses
         if not verses:
             return
         text = " ".join(v.text for v in verses)
-        self._tts_process = tts_service.speak(text)
+        try:
+            self._tts_process = tts_service.speak(text)
+        except (tts_service.TTSUnavailable, OSError) as error:
+            self._flash(str(error))
+            return
         self._flash("Reading aloud - R to stop")
 
     def _toggle_meditative_scroll(self) -> None:
@@ -754,7 +758,7 @@ class ReaderScreen(Screen):
         self._meditative_timer = self.set_interval(tick, self._meditative_step)
 
     def on_unmount(self) -> None:
-        # A `say` process outlives the screen unless told otherwise, and the
+        # A read-aloud process outlives the screen unless told otherwise, and the
         # meditative-scroll timer would happily keep firing into whatever
         # comes next - leaving here (quit, or the app tearing down for a
         # test) shouldn't leave either running unattended.

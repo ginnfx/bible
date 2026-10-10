@@ -66,3 +66,19 @@ def test_native_copy_falls_through_when_a_helper_errors(monkeypatch):
     monkeypatch.setattr(clipboard.subprocess, "run", explode)
 
     assert clipboard._copy_native("hello") is True
+
+
+def test_windows_clip_is_fed_utf16_so_non_ascii_survives(monkeypatch):
+    # clip.exe reads its input in the console code page unless it starts
+    # with a UTF-16 byte-order mark, so UTF-8 would turn "João" into mojibake.
+    sent: list[tuple[list[str], bytes]] = []
+
+    monkeypatch.setattr(clipboard.shutil, "which", lambda name: "C:/clip.exe" if name == "clip" else None)
+    monkeypatch.setattr(
+        clipboard.subprocess, "run", lambda cmd, **kw: sent.append((cmd, kw["input"]))
+    )
+
+    assert clipboard._copy_native("João 3:16") is True
+    command, payload = sent[0]
+    assert command == ["clip"]
+    assert payload.decode("utf-16") == "João 3:16"

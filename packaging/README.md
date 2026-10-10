@@ -3,8 +3,8 @@
 Turns `bible` into a single executable a recipient can run with no Python
 install, no `pip`, and no `import-data` step - everything (interpreter,
 Textual/PyYAML, and a content-only copy of the Bible database) is bundled
-in. Nothing here is published anywhere; a build is a file you hand
-someone directly.
+in. Tagged builds are published to this repo's GitHub Releases (see
+[Distributing](#distributing)).
 
 ## What's bundled
 
@@ -50,19 +50,35 @@ distros (Ubuntu 20.04+, Debian 11+, most others from the last ~5 years).
 glibc compatibility only goes forward, never back, so building on the
 *newest* base would silently narrow who can run the result.
 
-### Windows x86_64
+### Windows x86_64 (native, on a Windows machine)
 
-Not built yet - PyInstaller doesn't cross-compile, and there's no Windows
-host or reliable Wine-based path available here. Building this needs
-either a real Windows machine/VM running `packaging/build_macos.sh`'s
-approach (a `.spec`-driven PyInstaller build, same spec file, just run on
-Windows), or wiring a `windows-latest` matrix leg into the existing
-`build.yml` workflow. Tracked as a follow-up, the same way the
-tabs/split-views reader work is.
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging\build_windows.ps1
+```
+
+Builds `dist\windows\bible.exe`. If [Inno Setup 6](https://jrsoftware.org/isinfo.php)
+is installed (`winget install JRSoftware.InnoSetup`), it also builds
+`dist\windows\bible-windows-x86_64-setup.exe` from
+[`windows/bible.iss`](windows/bible.iss). That's a per-user installer
+(no admin prompt) that adds a Start menu entry, puts `bible` on the user
+PATH, and registers an uninstaller under Settings › Apps.
+
+Nuitka doesn't cross-compile, so this needs Windows. The `windows-latest`
+leg of `.github/workflows/build.yml` runs the same steps on every `v*` tag.
 
 ## Distributing
 
-Hand over the single file (`dist/macos/bible` or
-`dist/linux-x86_64/bible`) - no installer needed. On Linux/macOS the
-recipient may need `chmod +x bible` once if the executable bit didn't
-survive the transfer.
+Pushing a `v*` tag runs `.github/workflows/build.yml`, which builds all
+three platforms and attaches them to a GitHub Release on this repo:
+
+- `bible-windows-x86_64-setup.exe`: the installer most Windows users want
+- `bible-windows-x86_64.exe`: the bare executable, no install
+- `bible-macos-arm64`, `bible-linux-x86_64`
+
+`install.sh` and `install.ps1` always fetch the newest release. A manual run
+of the workflow builds without publishing; download the binaries from that
+run's artifacts.
+
+A local build is also just one file you can hand over directly. On
+Linux/macOS the recipient may need `chmod +x bible` once if the executable
+bit didn't survive the transfer.

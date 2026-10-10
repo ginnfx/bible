@@ -26,7 +26,7 @@ _MODES = [
         "Read aloud",
         "Hear the chapter, hands-free."
         if tts_service.is_available()
-        else "Needs macOS's `say` - not available here.",
+        else tts_service.unavailable_reason(),
     ),
     ("sermon", "Sermon", "The chapter, one verse at a time, large and centered."),
     ("contemplative", "Contemplative", "One verse, and a quiet timer to sit with it."),

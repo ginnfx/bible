@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import platform
 import sys
 
 from .models.verse import Verse
@@ -34,6 +35,7 @@ _COMMANDS = {
 
 
 def main(argv: list[str] | None = None) -> None:
+    _use_utf8_output()
     argv = list(sys.argv[1:] if argv is None else argv)
     parser = _build_parser()
     args = parser.parse_args(_normalise(argv))
@@ -53,6 +55,19 @@ def main(argv: list[str] | None = None) -> None:
         None: _cmd_tui,
     }
     handlers[args.command](args)
+
+
+def _use_utf8_output() -> None:
+    """Windows writes pipes and redirects in the ANSI code page, which can't
+    encode every verse, so ``bible read ... > file`` would crash mid-passage.
+    UTF-8 with replacement never raises; elsewhere the terminal's own
+    encoding is already right."""
+    if platform.system() != "Windows":
+        return
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="replace")
 
 
 def _normalise(argv: list[str]) -> list[str]:
