@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Downloads the latest standalone `bible` binary from this repo's GitHub
-# Releases and puts it on the PATH. No Python, no cloning, no build step.
+# Releases and adds its install directory to the user's shell PATH. No Python,
+# no cloning, no build step.
 # (Windows: install.ps1, or the installer on the Releases page.)
 set -euo pipefail
 
@@ -32,11 +33,45 @@ chmod +x "$INSTALL_DIR/bible"
 
 echo "Installed to $INSTALL_DIR/bible"
 
+# Persist the install directory in the user's startup file. Since this script
+# is usually piped into bash, it cannot update the calling terminal's PATH;
+# the change takes effect in newly opened shells.
+quoted_install_dir="'${INSTALL_DIR//\'/\'\\\'\'}'"
+shell_name="${SHELL##*/}"
+case "$shell_name" in
+    bash)
+        profile="$HOME/.bashrc"
+        path_line="export PATH=$quoted_install_dir:\"\$PATH\""
+        ;;
+    zsh)
+        profile="$HOME/.zshrc"
+        path_line="export PATH=$quoted_install_dir:\"\$PATH\""
+        ;;
+    fish)
+        profile="$HOME/.config/fish/config.fish"
+        fish_install_dir="${INSTALL_DIR//\\/\\\\}"
+        fish_install_dir="${fish_install_dir//\'/\\\'}"
+        path_line="fish_add_path -- '$fish_install_dir'"
+        ;;
+    *)
+        profile="$HOME/.profile"
+        path_line="export PATH=$quoted_install_dir:\"\$PATH\""
+        ;;
+esac
+
+mkdir -p "$(dirname "$profile")"
+touch "$profile"
+if ! grep -Fqx -- "$path_line" "$profile"; then
+    printf '\n%s\n' "$path_line" >> "$profile"
+    echo "Added $INSTALL_DIR to PATH in $profile"
+else
+    echo "$INSTALL_DIR is already configured in $profile"
+fi
+
 case ":$PATH:" in
     *":$INSTALL_DIR:"*) ;;
     *)
-        echo
-        echo "$INSTALL_DIR isn't on your PATH yet. Add this to your shell profile:"
+        echo "Open a new terminal, or run this now to use bible in this one:"
         echo "  export PATH=\"$INSTALL_DIR:\$PATH\""
         ;;
 esac
